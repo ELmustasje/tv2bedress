@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { fetchMovieDetails, fetchMovies } from './api/movies'
 import type { MovieDetails, MovieSummary } from './api/movies'
+import AppHeader from './components/AppHeader'
+import DetailsPanel from './components/DetailsPanel'
+import MovieGrid from './components/MovieGrid'
+import StatusMessage from './components/StatusMessage'
+import { isAbortError } from './utils/errors'
 
 const FALLBACK_MOVIES: MovieSummary[] = [
   {
@@ -139,152 +144,43 @@ function App() {
     }
   }, [movies, activeMovie, handleSelectMovie])
 
-  const formattedDuration = useMemo(() => {
-    if (!selectedDetails) {
-      return null
-    }
-
-    if (typeof selectedDetails.durationSeconds === 'number') {
-      return formatDuration(selectedDetails.durationSeconds)
-    }
-
-    if (selectedDetails.rawDuration) {
-      return selectedDetails.rawDuration
-    }
-
-    return null
-  }, [selectedDetails])
-
-  const externalLink = useMemo(() => {
+  const playbackHref = useMemo(() => {
     if (!selectedDetails?.url) {
       return null
     }
 
     const cleanPath = selectedDetails.url.replace(/^\/+/, '')
-    return `https://play.tv2.no/${cleanPath}`
+    return `/play/${cleanPath}`
   }, [selectedDetails])
 
   return (
     <div className="app">
-      <header className="app__header">
-        <h1 className="app__title">TV 2 Play filmoversikt</h1>
-        <p className="app__subtitle">
-          Bla gjennom filmer direkte fra API-et. Klikk på en film for å hente og vise detaljer.
-        </p>
-      </header>
+      <AppHeader
+        title="TV 2 Play filmoversikt"
+        subtitle="Bla gjennom filmer direkte fra API-et. Klikk på en film for å hente og vise detaljer."
+      />
 
-      {moviesError && <div className="app__status app__status--error">{moviesError}</div>}
+      {moviesError && (
+        <StatusMessage tone="error" role="alert">
+          {moviesError}
+        </StatusMessage>
+      )}
 
-      <section className="movie-grid" aria-live="polite">
-        {moviesLoading
-          ? Array.from({ length: 6 }).map((_, index) => (
-              <div key={`skeleton-${index}`} className="movie-card movie-card--loading">
-                <div className="movie-card__poster movie-card__poster--skeleton" />
-                <div className="movie-card__title movie-card__title--skeleton" />
-              </div>
-            ))
-          : movies.map((movie) => (
-              <button
-                key={movie.id}
-                type="button"
-                className={`movie-card${activeMovie?.url === movie.url ? ' movie-card--active' : ''}`}
-                onClick={() => handleSelectMovie(movie)}
-                aria-pressed={activeMovie?.url === movie.url}
-              >
-                {movie.imageUrl ? (
-                  <img
-                    src={movie.imageUrl}
-                    alt={`Filmplakat for ${movie.title}`}
-                    className="movie-card__poster"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="movie-card__poster movie-card__poster--empty">Ingen plakat</div>
-                )}
-                <h3 className="movie-card__title">{movie.title}</h3>
-              </button>
-            ))}
-      </section>
+      <MovieGrid
+        movies={movies}
+        isLoading={moviesLoading}
+        activeMovie={activeMovie}
+        onSelectMovie={handleSelectMovie}
+      />
 
-      <section className="details" aria-live="polite">
-        {detailsLoading && <div className="details__skeleton" aria-hidden="true" />}
-
-        {!detailsLoading && selectedDetails && (
-          <>
-            {selectedDetails.imageUrl && (
-              <img
-                src={selectedDetails.imageUrl}
-                alt={`Filmplakat for ${selectedDetails.title}`}
-                className="details__poster"
-              />
-            )}
-            <div className="details__body">
-              <h2 className="details__title">{selectedDetails.title}</h2>
-
-              {detailsError && <div className="app__status app__status--error">{detailsError}</div>}
-
-              <p className="details__description">
-                {selectedDetails.description ?? 'Ingen beskrivelse tilgjengelig for denne filmen.'}
-              </p>
-
-              <div className="details__meta">
-                {formattedDuration && <span>Varighet: {formattedDuration}</span>}
-                <span>API-sti: {selectedDetails.url}</span>
-              </div>
-
-              {externalLink && (
-                <div className="details__actions">
-                  <a className="details__link" href={externalLink} target="_blank" rel="noreferrer">
-                    Åpne på TV 2 Play
-                  </a>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {!detailsLoading && !selectedDetails && (
-          <div className="details__empty">
-            <h2>Velg en film for å se detaljer</h2>
-            <p>Vi henter informasjonen direkte fra API-et og viser den her.</p>
-          </div>
-        )}
-      </section>
+      <DetailsPanel
+        movie={selectedDetails}
+        isLoading={detailsLoading}
+        error={detailsError}
+        playbackHref={playbackHref}
+      />
     </div>
   )
-}
-
-function isAbortError(error: unknown): boolean {
-  if (!error) {
-    return false
-  }
-
-  return error instanceof DOMException
-    ? error.name === 'AbortError'
-    : typeof error === 'object' && 'name' in error && (error as { name?: string }).name === 'AbortError'
-}
-
-function formatDuration(durationSeconds: number): string {
-  const totalSeconds = Math.max(0, Math.round(durationSeconds))
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = totalSeconds % 60
-
-  const parts: string[] = []
-
-  if (hours > 0) {
-    parts.push(`${hours} t`)
-  }
-
-  if (minutes > 0) {
-    parts.push(`${minutes} min`)
-  }
-
-  if (parts.length === 0) {
-    parts.push(`${seconds} s`)
-  }
-
-  return parts.join(' ')
 }
 
 export default App
