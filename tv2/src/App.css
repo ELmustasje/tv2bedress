@@ -178,6 +178,10 @@
   transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
+.is-clickable {
+  cursor: pointer;
+}
+
 .hero-card--primary {
   grid-row: span 2;
   min-height: 420px;
@@ -486,6 +490,66 @@
   font-size: 0.9rem;
   color: rgba(246, 247, 251, 0.85);
   box-shadow: 0 16px 32px rgba(8, 11, 24, 0.45);
+}
+
+.subscription-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 9, 20, 0.86);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  z-index: 100;
+}
+
+.subscription-modal__dialog {
+  background: linear-gradient(160deg, rgba(18, 21, 40, 0.95), rgba(35, 28, 61, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.25rem;
+  max-width: min(420px, 100%);
+  width: 100%;
+  padding: 2.25rem;
+  box-shadow: 0 28px 60px rgba(8, 11, 24, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.subscription-modal__title {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.subscription-modal__description {
+  margin: 0;
+  color: rgba(246, 247, 251, 0.78);
+  line-height: 1.6;
+}
+
+.subscription-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.subscription-modal__button {
+  padding: 0.55rem 1.4rem;
+  border-radius: 999px;
+  border: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  background: linear-gradient(135deg, #7427ff, #c164ff);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.subscription-modal__button:hover,
+.subscription-modal__button:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(108, 60, 204, 0.35);
+  outline: none;
 }
 
 @media (max-width: 1080px) {
