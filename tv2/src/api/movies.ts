@@ -16,6 +16,8 @@ export interface MovieDetails extends MovieSummary {
 
 export async function fetchMovies(signal?: AbortSignal): Promise<MovieSummary[]> {
   const response = await fetch(MOVIES_FEED_PATH, { signal })
+  console.log(response);
+
 
   if (!response.ok) {
     throw new Error(`Kunne ikke hente filmfeed (status ${response.status})`)
@@ -52,18 +54,18 @@ export async function fetchMovieDetails(
 type UnknownRecord = Record<string, unknown>
 
 function extractItems(data: unknown): unknown[] {
-  if (Array.isArray(data)) {
-    return data
-  }
+  if (Array.isArray(data)) return data;
 
-  const record = asRecord(data)
-  if (!record) {
-    return []
-  }
+  const record = asRecord(data);
+  if (!record) return [];
 
-  const feedRecord = asRecord(record.feed)
-  const pageRecord = asRecord(record.page)
-  const responseRecord = asRecord(record.response)
+  const feedRecord = asRecord(record.feed);
+  const pageRecord = asRecord(record.page);
+  const responseRecord = asRecord(record.response);
+
+  // NEW: direct 'content' on the root
+  const directContent = readArray(record.content);
+  if (directContent) return directContent;
 
   const candidates = [
     readArray(record.items),
@@ -72,36 +74,39 @@ function extractItems(data: unknown): unknown[] {
     readArray(pageRecord?.items),
     readArray(asRecord(pageRecord?.content)?.items),
     readArray(responseRecord?.items),
-  ]
+  ];
 
   for (const candidate of candidates) {
-    if (candidate) {
-      return candidate
+    if (candidate) return candidate;
+  }
+
+  // NEW: feeds[].content or feeds[].items
+  const feedsArr = readArray(record.feeds);
+  if (feedsArr) {
+    for (const f of feedsArr) {
+      const fRec = asRecord(f);
+      if (!fRec) continue;
+      const feedContent = readArray(fRec.content);
+      if (feedContent) return feedContent;
+      const feedItems = readArray(fRec.items);
+      if (feedItems) return feedItems;
     }
   }
 
-  const sections = readArray(record.sections) ?? readArray(feedRecord?.sections) ?? []
-
+  const sections = readArray(record.sections) ?? readArray(feedRecord?.sections) ?? [];
   for (const section of sections) {
-    const sectionRecord = asRecord(section)
-    if (!sectionRecord) {
-      continue
-    }
-
-    const items = readArray(sectionRecord.items)
-    if (items) {
-      return items
-    }
+    const sectionRecord = asRecord(section);
+    if (!sectionRecord) continue;
+    const items = readArray(sectionRecord.items);
+    if (items) return items;
   }
 
-  return []
+  return [];
 }
 
 function toMovieSummary(item: unknown): MovieSummary | null {
-  const itemRecord = asRecord(item)
-  if (!itemRecord) {
-    return null
-  }
+  const itemRecord = asRecord(item);
+  if (!itemRecord) return null;
 
   const content =
     asRecord(itemRecord.content) ??
@@ -109,24 +114,22 @@ function toMovieSummary(item: unknown): MovieSummary | null {
     asRecord(itemRecord.asset) ??
     asRecord(itemRecord.target) ??
     asRecord(itemRecord.item) ??
-    itemRecord
+    itemRecord;
 
   const title =
     getString(content, 'title') ??
     getString(content, 'name') ??
     getString(itemRecord, 'title') ??
-    getString(itemRecord, 'name')
+    getString(itemRecord, 'name');
 
   const urlCandidate =
     getString(content, 'url') ??
     getString(content, 'path') ??
     getString(content, 'productPath') ??
     getString(itemRecord, 'url') ??
-    getString(itemRecord, 'path')
+    getString(itemRecord, 'path');
 
-  if (!title || !urlCandidate) {
-    return null
-  }
+  if (!title || !urlCandidate) return null;
 
   const idCandidate =
     getString(content, 'id') ??
@@ -135,23 +138,26 @@ function toMovieSummary(item: unknown): MovieSummary | null {
     getString(content, 'programId') ??
     getString(content, 'uuid') ??
     getString(content, 'slug') ??
-    urlCandidate
+    urlCandidate;
 
+  // NEW: allow image.src
   const posterCandidate =
     getString(content, 'imageUrl') ??
     getString(content, 'image_url') ??
     readString(getProp(asRecord(getProp(content, 'image')), 'url')) ??
+    readString(getProp(asRecord(getProp(content, 'image')), 'src')) ??   // 👈 add this
     readImageFromImages(getProp(content, 'images')) ??
     readString(getProp(asRecord(getProp(itemRecord, 'image')), 'url')) ??
+    readString(getProp(asRecord(getProp(itemRecord, 'image')), 'src')) ?? // 👈 and this
     getString(itemRecord, 'imageUrl') ??
-    getString(itemRecord, 'image_url')
+    getString(itemRecord, 'image_url');
 
   return {
     id: idCandidate && idCandidate.length > 0 ? idCandidate : normalisePath(urlCandidate),
     title,
     url: normalisePath(urlCandidate),
     imageUrl: ensurePoster(posterCandidate),
-  }
+  };
 }
 
 function normaliseMovieDetails(data: unknown, fallback?: MovieSummary): MovieDetails {
@@ -171,17 +177,18 @@ function normaliseMovieDetails(data: unknown, fallback?: MovieSummary): MovieDet
 
   const posterCandidate =
     readString(getProp(asRecord(getProp(record, 'image')), 'url')) ??
+    readString(getProp(asRecord(getProp(record, 'image')), 'src')) ??  // 👈 add
     getString(record, 'imageUrl') ??
     getString(record, 'image_url') ??
     readImageFromImages(getProp(record, 'images')) ??
-    summary?.imageUrl
+    summary?.imageUrl;
 
   const durationSeconds = parseDurationToSeconds(
     getProp(record, 'duration') ??
-      getProp(record, 'durationInSeconds') ??
-      getProp(record, 'runtime') ??
-      getProp(record, 'contentDuration') ??
-      getProp(record, 'durationSeconds'),
+    getProp(record, 'durationInSeconds') ??
+    getProp(record, 'runtime') ??
+    getProp(record, 'contentDuration') ??
+    getProp(record, 'durationSeconds'),
   )
 
   const idCandidate =
