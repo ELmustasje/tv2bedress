@@ -1,11 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
-import { fetchMovieDetails, fetchMovies } from './api/movies'
-import type { MovieDetails, MovieSummary } from './api/movies'
-import AppHeader from './components/AppHeader'
-import DetailsPanel from './components/DetailsPanel'
-import MovieGrid from './components/MovieGrid'
-import StatusMessage from './components/StatusMessage'
+import { fetchMovies } from './api/movies'
+import type { MovieSummary } from './api/movies'
 import { isAbortError } from './utils/errors'
 
 const FALLBACK_MOVIES: MovieSummary[] = [
@@ -32,49 +28,21 @@ const FALLBACK_MOVIES: MovieSummary[] = [
   },
 ]
 
-const FALLBACK_DETAILS: Record<string, MovieDetails> = {
-  'sample/nordlysjakten': {
-    ...FALLBACK_MOVIES[0],
-    description:
-      'Et reisefølge med eventyrlystne venner drar nordover for å filme nordlyset, men møter krefter de aldri hadde forventet.',
-    durationSeconds: 5400,
-  },
-  'sample/sommerbris': {
-    ...FALLBACK_MOVIES[1],
-    description:
-      'En varm feelgood-historie om et lite kystsamfunn som samles for å arrangere sommerens store musikkfestival.',
-    durationSeconds: 5820,
-  },
-  'sample/midnattslopet': {
-    ...FALLBACK_MOVIES[2],
-    description:
-      'En thrillende katt-og-mus-jakt gjennom Oslos bakgater der en nyutdannet journalist avslører en korrupsjonsskandale.',
-    durationSeconds: 6240,
-  },
-}
-
 function App() {
   const [movies, setMovies] = useState<MovieSummary[]>([])
-  const [moviesLoading, setMoviesLoading] = useState(true)
-  const [moviesError, setMoviesError] = useState<string | null>(null)
-  const [activeMovie, setActiveMovie] = useState<MovieSummary | null>(null)
-  const [selectedDetails, setSelectedDetails] = useState<MovieDetails | null>(null)
-  const [detailsLoading, setDetailsLoading] = useState(false)
-  const [detailsError, setDetailsError] = useState<string | null>(null)
-
-  const detailControllers = useRef<AbortController | null>(null)
-  const detailsCache = useRef<Record<string, MovieDetails>>({})
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
-    setMoviesLoading(true)
-    setMoviesError(null)
+    setIsLoading(true)
+    setError(null)
 
     fetchMovies(controller.signal)
       .then((fetched) => {
         if (fetched.length === 0) {
           setMovies(FALLBACK_MOVIES)
-          setMoviesError('Fant ingen filmer i feeden. Viser eksempeldata i stedet.')
+          setError('Fant ingen filmer i feeden. Viser eksempeldata i stedet.')
           return
         }
 
@@ -87,10 +55,10 @@ function App() {
 
         console.error('Kunne ikke hente filmer fra API-et', error)
         setMovies(FALLBACK_MOVIES)
-        setMoviesError('Kunne ikke hente filmer fra API-et. Viser eksempeldata i stedet.')
+        setError('Kunne ikke hente filmer fra API-et. Viser eksempeldata i stedet.')
       })
       .finally(() => {
-        setMoviesLoading(false)
+        setIsLoading(false)
       })
 
     return () => {
@@ -98,87 +66,22 @@ function App() {
     }
   }, [])
 
-  const handleSelectMovie = useCallback(async (movie: MovieSummary) => {
-    setActiveMovie(movie)
-    setDetailsError(null)
-
-    const cached = detailsCache.current[movie.url]
-    if (cached) {
-      setSelectedDetails(cached)
-      setDetailsLoading(false)
-      return
-    }
-
-    detailControllers.current?.abort()
-    const controller = new AbortController()
-    detailControllers.current = controller
-
-    setDetailsLoading(true)
-    setSelectedDetails((current) => (current?.url === movie.url ? current : null))
-
-    try {
-      const details = await fetchMovieDetails(movie.url, controller.signal, movie)
-      detailsCache.current[movie.url] = details
-      setSelectedDetails(details)
-    } catch (error) {
-      if (isAbortError(error)) {
-        return
-      }
-
-      console.error('Kunne ikke hente detaljer for filmen', error)
-      const fallback = FALLBACK_DETAILS[movie.url] ?? {
-        ...movie,
-        description: 'Ingen detaljer tilgjengelig for denne filmen.',
-      }
-      detailsCache.current[movie.url] = fallback
-      setSelectedDetails(fallback)
-      setDetailsError('Kunne ikke hente filmdetaljer fra API-et. Viser tilgjengelig informasjon.')
-    } finally {
-      setDetailsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (movies.length > 0 && !activeMovie) {
-      handleSelectMovie(movies[0])
-    }
-  }, [movies, activeMovie, handleSelectMovie])
-
-  const playbackHref = useMemo(() => {
-    if (!selectedDetails?.url) {
-      return null
-    }
-
-    const cleanPath = selectedDetails.url.replace(/^\/+/, '')
-    return `/play/${cleanPath}`
-  }, [selectedDetails])
-
   return (
     <div className="app">
-      <AppHeader
-        title="TV 2 Play filmoversikt"
-        subtitle="Bla gjennom filmer direkte fra API-et. Klikk på en film for å hente og vise detaljer."
-      />
+      <h1 className="app__title">Filmer</h1>
 
-      {moviesError && (
-        <StatusMessage tone="error" role="alert">
-          {moviesError}
-        </StatusMessage>
+      {isLoading ? (
+        <p>Laster filmer …</p>
+      ) : (
+        <>
+          {error && <p className="app__status app__status--error">{error}</p>}
+          <ul>
+            {movies.map((movie) => (
+              <li key={movie.id}>{movie.title}</li>
+            ))}
+          </ul>
+        </>
       )}
-
-      <MovieGrid
-        movies={movies}
-        isLoading={moviesLoading}
-        activeMovie={activeMovie}
-        onSelectMovie={handleSelectMovie}
-      />
-
-      <DetailsPanel
-        movie={selectedDetails}
-        isLoading={detailsLoading}
-        error={detailsError}
-        playbackHref={playbackHref}
-      />
     </div>
   )
 }
