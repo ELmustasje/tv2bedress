@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react'
 import './App.css'
 import { fetchMovies } from './api/movies'
 import type { MovieSummary } from './api/movies'
@@ -249,6 +250,7 @@ function App() {
   const [movies, setMovies] = useState<MovieSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -321,6 +323,44 @@ function App() {
     })
   }, [movies])
 
+  const openSubscriptionModal = () => {
+    setIsSubscriptionModalOpen(true)
+  }
+
+  const closeSubscriptionModal = () => {
+    setIsSubscriptionModalOpen(false)
+  }
+
+  const handleBlockedCardClick = (event: ReactMouseEvent<HTMLElement>) => {
+    event.preventDefault()
+    openSubscriptionModal()
+  }
+
+  const handleBlockedCardKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      openSubscriptionModal()
+    }
+  }
+
+  useEffect(() => {
+    if (!isSubscriptionModalOpen) {
+      return
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeSubscriptionModal()
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => {
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [isSubscriptionModalOpen])
+
   return (
     <div className="app">
       <div className="top-nav">
@@ -331,17 +371,39 @@ function App() {
 
           <nav aria-label="Hovedmeny" className="top-nav__links">
             {NAV_LINKS.map((link) => (
-              <a key={link} href="#" className="top-nav__link">
+              <a
+                key={link}
+                href="#"
+                className="top-nav__link"
+                onClick={(event) => {
+                  event.preventDefault()
+                  openSubscriptionModal()
+                }}
+              >
                 {link}
               </a>
             ))}
           </nav>
 
           <div className="top-nav__actions">
-            <button type="button" className="top-nav__action top-nav__action--ghost">
+            <button
+              type="button"
+              className="top-nav__action top-nav__action--ghost"
+              onClick={(event) => {
+                event.preventDefault()
+                openSubscriptionModal()
+              }}
+            >
               Logg inn
             </button>
-            <button type="button" className="top-nav__action">
+            <button
+              type="button"
+              className="top-nav__action"
+              onClick={(event) => {
+                event.preventDefault()
+                openSubscriptionModal()
+              }}
+            >
               Få tilgang
             </button>
           </div>
@@ -360,7 +422,12 @@ function App() {
             {heroShows.map((show, index) => (
               <article
                 key={show.title}
-                className={`hero-card${index === 0 ? ' hero-card--primary' : ''}`}
+                className={`hero-card${index === 0 ? ' hero-card--primary' : ''} is-clickable`}
+                role="button"
+                tabIndex={0}
+                aria-label={`Åpne ${show.title}`}
+                onClick={handleBlockedCardClick}
+                onKeyDown={handleBlockedCardKeyDown}
                 style={{
                   backgroundImage: `linear-gradient(120deg, rgba(8, 11, 25, 0.92) 10%, rgba(8, 11, 25, 0.5) 55%, rgba(8, 11, 25, 0.2) 100%), url(${show.imageUrl})`,
                 }}
@@ -373,7 +440,15 @@ function App() {
                   <h2 className="hero-card__title">{show.title}</h2>
                   <p className="hero-card__description">{show.description}</p>
                   <div className="hero-card__actions">
-                    <button type="button" className="button button--primary">
+                    <button
+                      type="button"
+                      className="button button--primary"
+                      onClick={(event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        openSubscriptionModal()
+                      }}
+                    >
                       {show.ctaLabel}
                     </button>
                   </div>
@@ -395,7 +470,14 @@ function App() {
               <h2 className="section__title">Se TV 2s kanaler direkte</h2>
               <p className="section__subtitle">Direktesendt innhold, akkurat nå.</p>
             </div>
-            <button type="button" className="section__cta">
+            <button
+              type="button"
+              className="section__cta"
+              onClick={(event) => {
+                event.preventDefault()
+                openSubscriptionModal()
+              }}
+            >
               Se alle
             </button>
           </header>
@@ -404,7 +486,12 @@ function App() {
             {CHANNELS.map((channel) => (
               <article
                 key={channel.id}
-                className="channel-card"
+                className="channel-card is-clickable"
+                role="button"
+                tabIndex={0}
+                aria-label={`Åpne kanal ${channel.label}`}
+                onClick={handleBlockedCardClick}
+                onKeyDown={handleBlockedCardKeyDown}
                 style={{
                   backgroundImage: `linear-gradient(160deg, rgba(12, 13, 26, 0.95) 10%, rgba(12, 13, 26, 0.75) 60%, rgba(12, 13, 26, 0.5) 100%), url(${channel.imageUrl})`,
                 }}
@@ -423,7 +510,14 @@ function App() {
               <h2 className="section__title">Direktesendt sport</h2>
               <p className="section__subtitle">Hold deg oppdatert på ukens kamper og høydepunkter.</p>
             </div>
-            <button type="button" className="section__cta">
+            <button
+              type="button"
+              className="section__cta"
+              onClick={(event) => {
+                event.preventDefault()
+                openSubscriptionModal()
+              }}
+            >
               Se alle
             </button>
           </header>
@@ -432,7 +526,12 @@ function App() {
             {sportEvents.map((event) => (
               <article
                 key={event.id}
-                className="sport-card"
+                className="sport-card is-clickable"
+                role="button"
+                tabIndex={0}
+                aria-label={`Åpne ${event.matchup}`}
+                onClick={handleBlockedCardClick}
+                onKeyDown={handleBlockedCardKeyDown}
                 style={{
                   backgroundImage: `linear-gradient(150deg, rgba(10, 12, 24, 0.9) 20%, rgba(10, 12, 24, 0.65) 70%), url(${event.imageUrl})`,
                 }}
@@ -457,7 +556,12 @@ function App() {
             {popularSeries.map((series) => (
               <article
                 key={series.id}
-                className="popular-card"
+                className="popular-card is-clickable"
+                role="button"
+                tabIndex={0}
+                aria-label={`Åpne ${series.title}`}
+                onClick={handleBlockedCardClick}
+                onKeyDown={handleBlockedCardKeyDown}
                 style={{
                   backgroundImage: `linear-gradient(160deg, rgba(8, 10, 20, 0.95) 10%, rgba(8, 10, 20, 0.7) 65%), url(${series.imageUrl})`,
                 }}
@@ -481,6 +585,36 @@ function App() {
       </footer>
 
       {isLoading && <div className="loading-overlay">Laster innhold …</div>}
+      {isSubscriptionModalOpen && (
+        <div
+          className="subscription-modal"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="subscription-modal-title"
+          aria-describedby="subscription-modal-description"
+          onClick={closeSubscriptionModal}
+        >
+          <div
+            className="subscription-modal__dialog"
+            role="document"
+            onClick={(event) => {
+              event.stopPropagation()
+            }}
+          >
+            <h2 id="subscription-modal-title" className="subscription-modal__title">
+              Tilgang kreves
+            </h2>
+            <p id="subscription-modal-description" className="subscription-modal__description">
+              Du har ikke riktig abonnement, kjøp et dyrer nå.
+            </p>
+            <div className="subscription-modal__actions">
+              <button type="button" className="subscription-modal__button" onClick={closeSubscriptionModal}>
+                Lukk
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
