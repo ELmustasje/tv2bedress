@@ -10,6 +10,47 @@
   gap: clamp(1.5rem, 4vw, 2.5rem);
 }
 
+.app__content {
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 2.5rem);
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 2fr);
+  align-items: flex-start;
+}
+
+.app__title-accent {
+  font-weight: 600;
+  color: #5cb6ff;
+}
+
+.app__grid-panel {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 3vw, 1.5rem);
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border-radius: 1.25rem;
+  background: linear-gradient(150deg, rgba(8, 12, 24, 0.88), rgba(5, 7, 15, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 22px 45px rgba(5, 8, 16, 0.55);
+}
+
+.app__section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.app__section-title {
+  margin: 0;
+  font-size: clamp(1.2rem, 3vw, 1.6rem);
+  font-weight: 600;
+}
+
+.app__section-description {
+  margin: 0;
+  color: rgba(246, 247, 251, 0.7);
+  font-size: 0.95rem;
+}
+
 .app__header {
   display: flex;
   flex-direction: column;
@@ -249,6 +290,12 @@ button.movie-card:active {
   }
 }
 
+@media (max-width: 1024px) {
+  .app__content {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .movie-grid {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -260,5 +307,11 @@ button.movie-card:active {
 
   .details__poster {
     width: 100%;
+  }
+}
+
+@media (min-width: 769px) {
+  .app__content {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 2.3fr);
   }
 }
